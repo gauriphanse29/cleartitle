@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Property Ledger — Blockchain</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+
+    header {
+      background: #1a3c6e; color: white;
+      padding: 18px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { font-size: 1.3rem; }
+    #walletInfo { font-size: 12px; color: #a0c4ff; margin-top: 4px; }
+    #connectBtn {
+      background: white; color: #1a3c6e; border: none;
+      padding: 10px 18px; border-radius: 6px;
+      cursor: pointer; font-weight: bold; font-size: 13px;
+    }
+
+    main { max-width: 860px; margin: 28px auto; padding: 0 20px; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .tab {
+      padding: 9px 18px; border-radius: 6px; cursor: pointer;
+      border: 2px solid #1a3c6e; color: #1a3c6e;
+      background: white; font-size: 13px;
+    }
+    .tab.active { background: #1a3c6e; color: white; }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .card {
+      background: white; border-radius: 10px;
+      padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 { color: #1a3c6e; margin-bottom: 16px; font-size: 1.05rem; }
+
+    input, select {
+      width: 100%; padding: 10px 14px; margin: 7px 0;
+      border: 1px solid #ccc; border-radius: 6px; font-size: 14px;
+    }
+    input[type="file"] { padding: 6px; }
+
+    button.primary {
+      background: #1a3c6e; color: white; border: none;
+      padding: 11px 22px; border-radius: 6px;
+      cursor: pointer; font-size: 13px; margin-top: 8px;
+    }
+    button.primary:hover { background: #2e5fa3; }
+
+    #status {
+      padding: 12px 16px; border-radius: 6px;
+      margin-bottom: 16px; font-size: 13px; display: none;
+    }
+    #status.success { background: #d4edda; color: #155724; display: block; }
+    #status.error   { background: #f8d7da; color: #721c24; display: block; }
+    #status.info    { background: #d1ecf1; color: #0c5460; display: block; }
+
+    .prop-card {
+      border: 1px solid #e0e0e0; border-radius: 8px;
+      padding: 16px; margin-top: 12px; background: #f9fbff;
+    }
+    .prop-card h3 { color: #1a3c6e; margin-bottom: 8px; font-size: 1rem; }
+    .prop-card p { font-size: 13px; color: #555; margin: 4px 0; }
+
+    .badge {
+      display: inline-block; background: #e8f4fd; color: #1a3c6e;
+      font-size: 11px; padding: 3px 10px; border-radius: 20px; margin-bottom: 8px;
+    }
+    .history-item, .doc-item {
+      background: #f4f4f4; border-radius: 6px;
+      padding: 10px 14px; margin-top: 8px; font-size: 12px; color: #444;
+    }
+    .doc-item a { color: #1a3c6e; text-decoration: none; font-weight: bold; }
+    hr { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🏢 Property Ledger — Blockchain</h1>
+    <div id="walletInfo">Wallet not connected</div>
+  </div>
+  <button id="connectBtn" onclick="connectWallet()">
+    🦊 Connect MetaMask
+  </button>
+</header>
+
+<main>
+  <div id="status"></div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('register', this)">
+      📝 Register
+    </button>
+    <button class="tab" onclick="showTab('myprops', this)">
+      🏠 My Properties
+    </button>
+    <button class="tab" onclick="showTab('search', this)">
+      🔍 Search
+    </button>
+    <button class="tab" onclick="showTab('transfer', this)">
+      🔄 Transfer
+    </button>
+    <button class="tab" onclick="showTab('docs', this)">
+      📄 Documents
+    </button>
+  </div>
+
+  <!-- REGISTER -->
+  <div id="tab-register" class="section active card">
+    <h2>Register a New Property</h2>
+    <input id="aptNo" placeholder="Apartment No. (e.g. A-101)" />
+    <input id="society" placeholder="Society / Complex Name" />
+    <input id="city" placeholder="City (e.g. Mumbai)" />
+    <button class="primary" onclick="registerProperty()">
+      ✅ Register on Blockchain
+    </button>
+  </div>
+
+  <!-- MY PROPERTIES -->
+  <div id="tab-myprops" class="section card">
+    <h2>My Properties</h2>
+    <button class="primary" onclick="loadMyProperties()">
+      🔄 Load My Properties
+    </button>
+    <div id="myPropertiesList"></div>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="tab-search" class="section card">
+    <h2>Search Property by ID</h2>
+    <input id="searchId" placeholder="Enter Property ID (e.g. 1)"
+           type="number" min="1" />
+    <button class="primary" onclick="searchProperty()">🔍 Search</button>
+    <div id="searchResult"></div>
+  </div>
+
+  <!-- TRANSFER -->
+  <div id="tab-transfer" class="section card">
+    <h2>Transfer Ownership</h2>
+    <input id="transferId" placeholder="Property ID" type="number" min="1" />
+    <input id="transferTo" placeholder="New owner wallet address (0x...)" />
+    <button class="primary" onclick="transferOwnership()">
+      🔄 Transfer Ownership
+    </button>
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div id="tab-docs" class="section card">
+    <h2>Upload Document</h2>
+    <input id="docPropertyId" placeholder="Property ID" type="number" min="1" />
+    <input id="docName" placeholder="Document Name (e.g. Sale Deed)" />
+    <input id="docFile" type="file" accept=".pdf,.jpg,.png" />
+    <button class="primary" onclick="uploadDocument()">
+      📤 Upload to IPFS & Store Hash on Blockchain
+    </button>
+
+    <hr />
+
+    <h2>View Documents</h2>
+    <input id="viewDocId" placeholder="Property ID" type="number" min="1" />
+    <button class="primary" onclick="loadDocuments()">
+      📂 Load Documents
+    </button>
+    <div id="documentsList"></div>
+  </div>
+</main>
+
+<!-- Ethers.js from CDN — no npm needed in frontend -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js">
+</script>
+
+<script>
+  let provider, signer, contract, walletAddress;
+  let contractABI = null;
+  let contractAddress = null;
+
+  // Load contract info when page opens
+  async function init() {
+    try {
+      const abiRes = await fetch("/PropertyLedger.json");
+      const abiJson = await abiRes.json();
+      contractABI = abiJson.abi;
+
+      const addrRes = await fetch("/contract-address.txt");
+      contractAddress = (await addrRes.text()).trim();
+
+      console.log("Contract loaded:", contractAddress);
+    } catch (e) {
+      console.error("Could not load contract info:", e);
+    }
+  }
+  init();
+
+  // Tab switching
+  function showTab(name, btn) {
+    document.querySelectorAll(".section")
+      .forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".tab")
+      .forEach(t => t.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+    btn.classList.add("active");
+  }
+
+  // Status message
+  function setStatus(msg, type = "info") {
+    const el = document.getElementById("status");
+    el.textContent = msg;
+    el.className = type;
+    if (!msg) el.style.display = "none";
+  }
+
+  // Connect MetaMask wallet
+  async function connectWallet() {
+    if (!window.ethereum) {
+      return alert("MetaMask not found! Please install it from metamask.io");
+    }
+    try {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      walletAddress = await signer.getAddress();
+      contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+      document.getElementById("walletInfo").textContent =
+        "Connected: " + walletAddress;
+      document.getElementById("connectBtn").textContent = "✅ Connected";
+      setStatus("Wallet connected successfully!", "success");
+    } catch (e) {
+      setStatus("Could not connect wallet: " + e.message, "error");
+    }
+  }
+
+  // Register a new property
+  async function registerProperty() {
+    if (!contract) return setStatus("Connect your wallet first!", "error");
+    const apt    = document.getElementById("aptNo").value.trim();
+    const soc    = document.getElementById("society").value.trim();
+    const city   = document.getElementById("city").value.trim();
+    if (!apt || !soc || !city)
+      return setStatus("Please fill in all three fields.", "error");
+
+    setStatus("⏳ Sending to blockchain, please wait...", "info");
+    try {
+      const tx = await contract.register(apt, soc, city);
+      setStatus("⏳ Waiting for confirmation...", "info");
+      await tx.wait();
+      setStatus("✅ Property registered! Transaction: " + tx.hash, "success");
+      // Clear fields
+      document.getElementById("aptNo").value = "";
+      document.getElementById("society").value = "";
+      document.getElementById("city").value = "";
+    } catch (e) {
+      setStatus("❌ Error: " + (e.reason || e.message), "error");
+    }
+  }
+
+  // Load all properties owned by connected wallet
+  async function loadMyProperties() {
+    if (!walletAddress) return setStatus("Connect wallet first!", "error");
+    setStatus("Loading...", "info");
+    try {
+      const res = await fetch("/api/properties/" + walletAddress);
+      const data = await res.json();
+      const container = document.getElementById("myPropertiesList");
+      if (!data.length) {
+        container.innerHTML =
+          "<p style='color:#888;margin-top:14px'>No properties found.</p>";
+        return setStatus("", "");
+      }
+      container.innerHTML = data.map(p => `
+        <div class="prop-card">
+          <span class="badge">ID: ${p.id}</span>
+          <h3>🏠 ${p.apartmentNo} — ${p.societyName}</h3>
+          <p>📍 ${p.city}</p>
+          <p style="font-size:11px;color:#888">Owner: ${p.owner}</p>
+        </div>
+      `).join("");
+      setStatus("", "");
+    } catch (e) {
+      setStatus("Error loading properties: " + e.message, "error");
+    }
+  }
+
+  // Search a property by its ID
+  async function searchProperty() {
+    const id = document.getElementById("searchId").value;
+    if (!id) return setStatus("Enter a property ID.", "error");
+    setStatus("Searching...", "info");
+    try {
+      const res = await fetch("/api/property/" + id);
+      const data = await res.json();
+      if (data.error) return setStatus("Property not found.", "error");
+
+      const histHTML = data.history.length
+        ? data.history.map(h => `
+            <div class="history-item">
+              From: ${h.from}<br>
+              To: ${h.to}<br>
+              Date: ${h.at}
+            </div>`).join("")
+        : "<p style='color:#888;font-size:12px;margin-top:8px'>No transfers yet.</p>";
+
+      document.getElementById("searchResult").innerHTML = `
+        <div class="prop-card" style="margin-top:16px">
+          <span class="badge">ID: ${data.id}</span>
+          <h3>🏠 ${data.apartmentNo} — ${data.societyName}</h3>
+          <p>📍 ${data.city}</p>
+          <p>👤 Owner: ${data.owner}</p>
+          <p>📅 Registered: ${data.registeredAt}</p>
+          <p style="margin-top:12px;font-weight:bold;font-size:13px">
+            Ownership History:
+          </p>
+          ${histHTML}
+        </div>`;
+      setStatus("", "");
+    } catch (e) {
+      setStatus("Error: " + e.message, "error");
+    }
+  }
+
+  // Transfer ownership to another wallet
+  async function transferOwnership() {
+    if (!contract) return setStatus("Connect wallet first!", "error");
+    const id = document.getElementById("transferId").value;
+    const to = document.getElementById("transferTo").value.trim();
+    if (!id || !to) return setStatus("Fill in both fields.", "error");
+
+    setStatus("⏳ Processing transfer...", "info");
+    try {
+      const tx = await contract.transfer(id, to);
+      await tx.wait();
+      setStatus("✅ Ownership transferred! TX: " + tx.hash, "success");
+      document.getElementById("transferId").value = "";
+      document.getElementById("transferTo").value = "";
+    } catch (e) {
+      setStatus("❌ Error: " + (e.reason || e.message), "error");
+    }
+  }
+
+  // Upload document to IPFS then store hash on blockchain
+  async function uploadDocument() {
+    if (!contract) return setStatus("Connect wallet first!", "error");
+    const propertyId = document.getElementById("docPropertyId").value;
+    const docName    = document.getElementById("docName").value.trim();
+    const fileInput  = document.getElementById("docFile");
+
+    if (!propertyId || !docName || !fileInput.files[0])
+      return setStatus("Fill all fields and select a file.", "error");
+
+    // Step 1: Upload file to IPFS via backend
+    setStatus("⏳ Uploading file to IPFS...", "info");
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+
+    const uploadRes = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const { ipfsHash, error } = await uploadRes.json();
+    if (error) return setStatus("IPFS Error: " + error, "error");
+
+    // Step 2: Store the hash on blockchain
+    setStatus("⏳ Storing document hash on blockchain...", "info");
+    try {
+      const tx = await contract.addDocument(propertyId, docName, ipfsHash);
+      await tx.wait();
+      setStatus(
+        `✅ Done! File on IPFS, hash on blockchain.\nHash: ${ipfsHash}`,
+        "success"
+      );
+    } catch (e) {
+      setStatus("❌ Blockchain error: " + (e.reason || e.message), "error");
+    }
+  }
+
+  // Load all documents for a property
+  async function loadDocuments() {
+    const id = document.getElementById("viewDocId").value;
+    if (!id) return setStatus("Enter a property ID.", "error");
+
+    try {
+      const res  = await fetch("/api/documents/" + id);
+      const docs = await res.json();
+      const container = document.getElementById("documentsList");
+
+      if (!docs.length) {
+        container.innerHTML =
+          "<p style='color:#888;margin-top:12px'>No documents uploaded yet.</p>";
+        return;
+      }
+      container.innerHTML = docs.map(d => `
+        <div class="doc-item">
+          <b>📄 ${d.name}</b><br>
+          <span style="word-break:break-all;font-size:11px">
+            IPFS Hash: ${d.ipfsHash}
+          </span><br>
+          Uploaded: ${d.uploadedAt}<br>
+          <a href="${d.viewUrl}" target="_blank">🔗 View Document</a>
+        </div>
+      `).join("");
+    } catch (e) {
+      setStatus("Error: " + e.message, "error");
+    }
+  }
+</script>
+</body>
+</html>
